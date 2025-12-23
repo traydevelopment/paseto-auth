@@ -5,8 +5,10 @@ edition = "2024"
 authors = ["Alptekin Bodur"]
 description = "Paseto v4.public microservice compatible library for token creation and validation"
 readme = "README.md"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/alptekinbodur/paseto-auth"
+keywords = ["paseto", "auth", "jwt-alternative", "ed25519", "microservice"]
+categories = ["authentication", "cryptography", "web-programming"]
 
 [dependencies]
 ed25519-dalek = "2.2"
