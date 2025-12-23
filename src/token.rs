@@ -1,16 +1,36 @@
 use crate::{Claims, PasetoError};
-use ed25519_dalek::{SigningKey, VerifyingKey, Signature, Signer, Verifier};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use std::convert::TryInto;
 
-const FOOTER: &str = "myapp"; // Global footer – must be the same in all services
+const FOOTER: &str = "tray"; // Global footer – must be the same in all services
 
 fn b64url_encode(data: &[u8]) -> String {
     URL_SAFE_NO_PAD.encode(data)
 }
 
-/// Paseto v4.public generates tokens
-pub fn create_paseto_v4_public(
+// create user token
+pub fn create_token(
+    claims: Claims,
+    private_key: &str,
+    ttl_seconds: u64,
+) -> Result<String, PasetoError> {
+    let sk_bytes: [u8; 32] = hex::decode(private_key)?
+        .try_into()
+        .map_err(|_| PasetoError::InvalidPrivateKey)?;
+
+    let new_claims = Claims::new(
+        claims.user_id,
+        claims.user_name,
+        claims.company_id,
+        claims.company_name,
+        ttl_seconds,
+    );
+
+    private_create_paseto_v4_public(&new_claims, &sk_bytes)
+}
+
+fn private_create_paseto_v4_public(
     claims: &Claims,
     secret_key_bytes: &[u8; 32],
 ) -> Result<String, PasetoError> {
@@ -25,11 +45,22 @@ pub fn create_paseto_v4_public(
     let signature: Signature = signing_key.sign(&message);
     let sig_b64 = b64url_encode(&signature.to_bytes());
 
-    Ok(format!("v4.public.{}.{}.{}", payload_b64, sig_b64, footer_b64))
+    Ok(format!(
+        "v4.public.{}.{}.{}",
+        payload_b64, sig_b64, footer_b64
+    ))
 }
 
-/// Validates Paseto v4.public token
-pub fn verify_paseto_v4_public(
+pub fn verify_token(token: &str, public_key: &str) -> Result<Claims, PasetoError> {
+    let pk_bytes: [u8; 32] = hex::decode(public_key)
+        .map_err(PasetoError::HexError)?
+        .try_into()
+        .map_err(|_| PasetoError::InvalidPublicKey)?;
+
+    private_verify_paseto_v4_public(&token, &pk_bytes)
+}
+
+fn private_verify_paseto_v4_public(
     token: &str,
     public_key_bytes: &[u8; 32],
 ) -> Result<Claims, PasetoError> {
@@ -42,7 +73,7 @@ pub fn verify_paseto_v4_public(
     let sig_b64 = parts[3];
     let footer_b64 = parts[4];
 
-    // Footer 
+    // Footer
     let expected_footer_b64 = b64url_encode(FOOTER.as_bytes());
     if footer_b64 != expected_footer_b64 {
         return Err(PasetoError::InvalidFooter);
