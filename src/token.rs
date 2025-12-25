@@ -21,6 +21,7 @@ pub fn create_token(
 
     let new_claims = Claims::new(
         claims.user_id,
+        claims.level,
         claims.user_name,
         claims.company_id,
         claims.company_name,
