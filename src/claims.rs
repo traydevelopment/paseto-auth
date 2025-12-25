@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Claims {
     pub user_id: String,        // User ID
     pub level: i32,
@@ -51,5 +51,17 @@ impl Claims {
     pub fn is_valid(&self) -> bool {
         let now = chrono::Utc::now().timestamp();
         self.exp > now && self.iat <= now
+    }
+}
+
+impl Claims {
+    /// Struct'ı JSON string'e dönüştürür.
+    pub fn to_json_string(&self) -> String {
+        serde_json::to_string(self).unwrap_or_default()
+    }
+
+    /// JSON string'den SampleModel oluşturur.
+    pub fn from_json_string(json_str: &str) -> Self {
+        serde_json::from_str(json_str).unwrap_or_default()
     }
 }
